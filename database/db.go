@@ -15,7 +15,7 @@ func ConnectDatabase() *sql.DB {
 	db, err := sql.Open("pgx", psqlconn)
 
 	if err != nil {
-		log.Fatalf("could not connect to database: %v", err)
+		log.Printf("could not connect to database: %v\n", err)
 	}
 
 	db.SetMaxIdleConns(5)
@@ -24,7 +24,7 @@ func ConnectDatabase() *sql.DB {
 	db.SetConnMaxLifetime(30 * time.Second)
 
 	if err := db.Ping(); err != nil {
-		log.Fatalf("unable to reach database: %v", err)
+		log.Printf("unable to reach database: %v\n", err)
 	}
 
 	return db
