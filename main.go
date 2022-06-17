@@ -1,0 +1,235 @@
+package main
+
+import (
+	"database/sql"
+	"html/template"
+	"log"
+	"net/http"
+	"time"
+
+	"go_my_diary/database"
+	"go_my_diary/handlers"
+
+	"github.com/gorilla/mux"
+)
+
+var pageTemplates = template.Must(template.ParseGlob("./views/pages/*"))
+var db *sql.DB
+
+type Data struct {
+	Message string
+	Errors  map[string]string
+}
+
+func main() {
+	db = database.ConnectDatabase()
+	err := database.CreateAdminTable(db)
+	// server should still show some pages despite no data from database
+	if err != nil {
+		log.Println(err)
+	}
+
+	router := mux.NewRouter()
+	router.HandleFunc("/", recoverHandler(loggingHandler(Homepage()))).Methods("GET")
+	router.HandleFunc("/admin-register", recoverHandler(loggingHandler(AdminRegister()))).Methods("GET")
+	router.HandleFunc("/admin-register", recoverHandler(loggingHandler(AdminRegisterAction()))).Methods("POST")
+	router.HandleFunc("/admin-login", recoverHandler(loggingHandler(AdminLogin()))).Methods("GET")
+	router.HandleFunc("/admin-login", recoverHandler(loggingHandler(AdminLoginAction()))).Methods("POST")
+	router.HandleFunc("/admin-homepage", recoverHandler(loggingHandler(AdminHomepage()))).Methods("GET")
+	router.HandleFunc("/admin-logout", recoverHandler(loggingHandler(AdminLogout()))).Methods("POST")
+	router.HandleFunc("/test", recoverHandler(loggingHandler(Test()))).Methods("GET")
+	router.HandleFunc("/bad-request", recoverHandler(loggingHandler(BadRequest()))).Methods("GET")
+	router.HandleFunc("/access-denied", recoverHandler(loggingHandler(AccessDenied()))).Methods("GET")
+	router.HandleFunc("/500", recoverHandler(loggingHandler(InternalServerError()))).Methods("GET")
+	router.NotFoundHandler = notFound()
+
+	log.Println("Starting server")
+	log.Fatal(http.ListenAndServe(":8080", router))
+}
+
+// actions
+func AdminRegisterAction() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		err := r.ParseForm()
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		email := r.Form.Get("email")
+		password := r.Form.Get("password")
+		exist, err := database.AdminEmailExist(db, email)
+
+		if err != nil {
+			log.Println(err.Error)
+			render(w, "internal_server_error.html", nil)
+			return
+		}
+
+		if exist > 0 {
+			render(w, "admin_register.html", Data{Message: "Email already exist."})
+			return
+		}
+
+		hashedPwd, err := handlers.HashAndSalt(password)
+
+		if err != nil {
+			log.Println(err.Error)
+			render(w, "internal_server_error.html", nil)
+			return
+		}
+
+		err = database.InsertAdmin(db, email, hashedPwd)
+
+		if err != nil {
+			log.Println(err.Error)
+			render(w, "internal_server_error.html", nil)
+			return
+		}
+
+		render(w, "admin_login.html", Data{Message: "Registration success."})
+	})
+}
+
+func AdminLoginAction() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		err := r.ParseForm()
+
+		if err != nil {
+			log.Println(err.Error)
+			render(w, "internal_server_error.html", nil)
+			return
+		}
+
+		email := r.Form.Get("email")
+		password := r.Form.Get("password")
+
+		hpwd, err := database.SelectAdminHpwd(db, email)
+
+		if err != nil {
+			log.Println(err.Error)
+			render(w, "internal_server_error.html", nil)
+			return
+		}
+
+		match := handlers.ComparePasswords(hpwd, password)
+
+		if !match {
+			render(w, "admin_login.html", Data{Message: "Login failed."})
+			return
+		}
+
+		render(w, "admin_homepage.html", Data{Message: "Successfully login."})
+	})
+}
+
+// simple views
+func Homepage() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		render(w, "homepage.html", nil)
+	})
+}
+
+func AdminRegister() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		render(w, "admin_register.html", nil)
+	})
+}
+
+func AdminLogin() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		render(w, "admin_login.html", nil)
+	})
+}
+
+func AdminHomepage() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		render(w, "admin_homepage.html", nil)
+	})
+}
+
+func AdminLogout() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		render(w, "homepage.html", nil)
+	})
+}
+
+// 500
+func InternalServerError() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		render(w, "internal_server_error.html", nil)
+	})
+}
+
+// 400
+func BadRequest() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		render(w, "bad_request.html", nil)
+	})
+}
+
+// 401
+func AccessDenied() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		render(w, "access_denied.html", nil)
+	})
+}
+
+// 404
+func notFound() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		render(w, "notfound.html", nil)
+	})
+}
+
+// MIDDLEWARE
+
+func loggingHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t1 := time.Now()
+		next.ServeHTTP(w, r)
+		t2 := time.Now()
+		log.Printf("[INFO] %s %q %v\n", r.Method, r.URL.String(), t2.Sub(t1))
+	})
+}
+
+func recoverHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Printf("[PANIC] %+v\n", err)
+				http.Error(w, "Something went wrong.", 500)
+			}
+		}()
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// UTIL FUNC
+
+// this is for testing purpose only
+func Test() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		render(w, "test.html", nil)
+	})
+}
+
+// general page rendering
+// potentially can pass in title, teaser, content, general message
+func render(w http.ResponseWriter, fileName string, data interface{}) {
+	err := pageTemplates.ExecuteTemplate(w, fileName, data)
+	checkError(w, err)
+}
+
+func checkError(w http.ResponseWriter, err error) {
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "Something went wrong.", http.StatusInternalServerError)
+	}
+}

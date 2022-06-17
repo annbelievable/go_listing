@@ -1,0 +1,28 @@
+<html>
+	<head>
+		<title>Admin Login</title>
+	</head>
+	<body>
+		<h1>Admin Login</h1>
+		{{ with .Message }}
+		<p>{{ . }}</p>
+		{{ end }}
+		<form method="POST" action="/admin-login">
+			<div class="form-group">
+				<label for="email">Email address</label>
+				<input type="email" name="email" id="email" class="form-control" required="true">
+				{{ with .Errors.Email }}
+				<p class="error" >{{ . }}</p>
+				{{ end }}
+			</div>
+			<div class="form-group">
+				<label for="password">Password</label>
+				<input type="password" name="password" id="password" class="form-control" required="true">
+				{{ with .Errors.Password }}
+				<p class="error" >{{ . }}</p>
+				{{ end }}
+			</div>
+			<button type="submit">Submit</button>
+		</form>
+	</body>
+</html>

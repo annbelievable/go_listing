@@ -1,0 +1,15 @@
+<html>
+	<head>
+        {{ with .Title }}
+		<title>{{ . }}</title>
+		{{ end }}
+	</head>
+	<body>
+        {{ with .Title }}
+		<h1>{{ . }}</h1>
+		{{ end }}
+        {{ with .Content }}
+		<p>{{ . }}</p>
+		{{ end }}
+	</body>
+</html>
