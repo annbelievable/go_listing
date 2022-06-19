@@ -13,14 +13,18 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// page by page, this is not tidy
-// var templates = template.Must(template.ParseFiles("./views/pages/homepage.html"))
+var templates = template.Must(template.ParseGlob("./views/*.html"))
 var pageTemplates = template.Must(template.ParseGlob("./views/pages/*"))
 var db *sql.DB
 
-type Data struct {
+type MessageData struct {
 	Message string
 	Errors  map[string]string
+}
+
+type PageContent struct {
+	Title   string
+	Content string
 }
 
 func main() {
@@ -45,8 +49,8 @@ func main() {
 	router.HandleFunc("/500", InternalServerError).Methods("GET")
 	router.NotFoundHandler = notFound()
 
-	router.Use(loggingHandler)
 	router.Use(recoverHandler)
+	router.Use(loggingHandler)
 
 	log.Println("Starting server")
 	log.Fatal(http.ListenAndServe(":8080", router))
@@ -67,12 +71,12 @@ func AdminRegisterAction(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Println(err.Error)
-		render(w, "internal_server_error.html", nil)
+		renderPage(w, "internal_server_error.html", nil)
 		return
 	}
 
 	if exist > 0 {
-		render(w, "admin_register.html", Data{Message: "Email already exist."})
+		renderPage(w, "admin_register.html", MessageData{Message: "Email already exist."})
 		return
 	}
 
@@ -80,7 +84,7 @@ func AdminRegisterAction(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Println(err.Error)
-		render(w, "internal_server_error.html", nil)
+		renderPage(w, "internal_server_error.html", nil)
 		return
 	}
 
@@ -88,11 +92,11 @@ func AdminRegisterAction(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Println(err.Error)
-		render(w, "internal_server_error.html", nil)
+		renderPage(w, "internal_server_error.html", nil)
 		return
 	}
 
-	render(w, "admin_login.html", Data{Message: "Registration success."})
+	renderPage(w, "admin_login.html", MessageData{Message: "Registration success."})
 }
 
 func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
@@ -100,7 +104,7 @@ func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Println(err.Error)
-		render(w, "internal_server_error.html", nil)
+		renderPage(w, "internal_server_error.html", nil)
 		return
 	}
 
@@ -111,64 +115,69 @@ func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Println(err.Error)
-		render(w, "internal_server_error.html", nil)
+		renderPage(w, "internal_server_error.html", nil)
 		return
 	}
 
 	match := handlers.ComparePasswords(hpwd, password)
 
 	if !match {
-		render(w, "admin_login.html", Data{Message: "Login failed."})
+		renderPage(w, "admin_login.html", MessageData{Message: "Login failed."})
 		return
 	}
 
-	render(w, "admin_homepage.html", Data{Message: "Successfully login."})
+	renderPage(w, "admin_homepage.html", MessageData{Message: "Successfully login."})
 }
 
 // simple views
 func Homepage(w http.ResponseWriter, r *http.Request) {
-	render(w, "homepage.html", nil)
+	data := PageContent{
+		Title:   "Homepage",
+		Content: "Homepage content for users to see",
+	}
+
+	render(w, data)
 }
 
 func AdminRegister(w http.ResponseWriter, r *http.Request) {
-	render(w, "admin_register.html", nil)
+	renderPage(w, "admin_register.html", nil)
 }
 
 func AdminLogin(w http.ResponseWriter, r *http.Request) {
-	render(w, "admin_login.html", nil)
+	renderPage(w, "admin_login.html", nil)
 }
 
 func AdminHomepage(w http.ResponseWriter, r *http.Request) {
-	render(w, "admin_homepage.html", nil)
+	renderPage(w, "admin_homepage.html", nil)
 }
 
 func AdminLogout(w http.ResponseWriter, r *http.Request) {
-	render(w, "homepage.html", nil)
+	renderPage(w, "homepage.html", nil)
 }
 
 // 500
 func InternalServerError(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusInternalServerError)
-	render(w, "internal_server_error.html", nil)
+	renderPage(w, "internal_server_error.html", nil)
 }
 
 // 400
 func BadRequest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
-	render(w, "bad_request.html", nil)
+	renderPage(w, "bad_request.html", nil)
 }
 
 // 401
 func AccessDenied(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusUnauthorized)
-	render(w, "access_denied.html", nil)
+	renderPage(w, "access_denied.html", nil)
 }
 
 // 404
 func notFound() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		render(w, "notfound.html", nil)
+		renderPage(w, "notfound.html", nil)
 	})
 }
 
@@ -187,7 +196,7 @@ func recoverHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				log.Printf("[PANIC] %+v\n", err)
+				log.Printf("[ERROR] %+v\n", err)
 				http.Error(w, "Something went wrong.", 500)
 			}
 		}()
@@ -200,19 +209,24 @@ func recoverHandler(next http.Handler) http.Handler {
 
 // this is for testing purpose only
 func Test(w http.ResponseWriter, r *http.Request) {
-	render(w, "test.html", nil)
+	renderPage(w, "test.html", nil)
 }
 
 // general page rendering
 // potentially can pass in title, teaser, content, general message
-func render(w http.ResponseWriter, fileName string, data interface{}) {
+func render(w http.ResponseWriter, data interface{}) {
+	err := templates.ExecuteTemplate(w, "layout.html", data)
+	checkError(w, err)
+}
+
+func renderPage(w http.ResponseWriter, fileName string, data interface{}) {
 	err := pageTemplates.ExecuteTemplate(w, fileName, data)
 	checkError(w, err)
 }
 
 func checkError(w http.ResponseWriter, err error) {
 	if err != nil {
-		log.Println(err.Error())
-		http.Error(w, "Something went wrong.", http.StatusInternalServerError)
+		log.Printf("[ERROR] %+v\n", err)
+		http.Error(w, "Something went wrong.", 500)
 	}
 }
