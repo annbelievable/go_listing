@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"go_my_diary/database"
-	"go_my_diary/handlers"
+	"github.com/annbelievable/go_listing/database"
+	"github.com/annbelievable/go_listing/handlers"
 
 	"github.com/gorilla/mux"
 )
