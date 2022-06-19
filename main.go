@@ -13,8 +13,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var templates = template.Must(template.ParseGlob("./views/*.html"))
-var pageTemplates = template.Must(template.ParseGlob("./views/pages/*"))
+var templates = template.Must(template.ParseGlob("./views/**/*.html"))
 var db *sql.DB
 
 type MessageData struct {
@@ -132,52 +131,84 @@ func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
 // simple views
 func Homepage(w http.ResponseWriter, r *http.Request) {
 	data := PageContent{
-		Title:   "Homepage",
-		Content: "Homepage content for users to see",
+		Title:   "Home",
+		Content: "This is My listing. Please enjoy browsing.",
 	}
 
 	render(w, data)
 }
 
 func AdminRegister(w http.ResponseWriter, r *http.Request) {
-	renderPage(w, "admin_register.html", nil)
+	data := PageContent{
+		Title:   "Admin Registration",
+		Content: "",
+	}
+	renderPage(w, "admin_register.html", data)
 }
 
 func AdminLogin(w http.ResponseWriter, r *http.Request) {
-	renderPage(w, "admin_login.html", nil)
+	data := PageContent{
+		Title:   "Admin Login",
+		Content: "",
+	}
+	renderPage(w, "admin_login.html", data)
 }
 
 func AdminHomepage(w http.ResponseWriter, r *http.Request) {
-	renderPage(w, "admin_homepage.html", nil)
+	data := PageContent{
+		Title:   "Admin Homepage",
+		Content: "",
+	}
+	render(w, data)
 }
 
 func AdminLogout(w http.ResponseWriter, r *http.Request) {
-	renderPage(w, "homepage.html", nil)
+	data := PageContent{
+		Title:   "Homepage",
+		Content: "This is My listing. Please enjoy browsing.",
+	}
+	render(w, data)
 }
 
 // 500
 func InternalServerError(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusInternalServerError)
-	renderPage(w, "internal_server_error.html", nil)
+	data := PageContent{
+		Title:   "500: Internal Server Error",
+		Content: "An error occurred, please contact admin about it.",
+	}
+	render(w, data)
 }
 
 // 400
 func BadRequest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
-	renderPage(w, "bad_request.html", nil)
+	data := PageContent{
+		Title:   "400: Bad Request",
+		Content: "Please try again.",
+	}
+	render(w, data)
 }
 
 // 401
 func AccessDenied(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusUnauthorized)
-	renderPage(w, "access_denied.html", nil)
+	data := PageContent{
+		Title:   "401: Access Denied",
+		Content: "You're not allowed to access this content.",
+	}
+	render(w, data)
 }
 
 // 404
 func notFound() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		renderPage(w, "notfound.html", nil)
+		data := PageContent{
+			Title:   "404: Not Found",
+			Content: "The content youre looking for is not found.",
+		}
+		render(w, data)
 	})
 }
 
@@ -209,7 +240,11 @@ func recoverHandler(next http.Handler) http.Handler {
 
 // this is for testing purpose only
 func Test(w http.ResponseWriter, r *http.Request) {
-	renderPage(w, "test.html", nil)
+	data := PageContent{
+		Title:   "Test",
+		Content: "This is a test page.",
+	}
+	render(w, data)
 }
 
 // general page rendering
@@ -220,7 +255,7 @@ func render(w http.ResponseWriter, data interface{}) {
 }
 
 func renderPage(w http.ResponseWriter, fileName string, data interface{}) {
-	err := pageTemplates.ExecuteTemplate(w, fileName, data)
+	err := templates.ExecuteTemplate(w, fileName, data)
 	checkError(w, err)
 }
 
