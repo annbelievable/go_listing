@@ -1,0 +1,12 @@
+{{define "body"}}
+<div class="container">
+    {{ with .Title }}
+    <div class="title">
+        <h1>{{ . }}</h1>
+    </div>
+    {{ end }}
+    {{ with .Content }}
+    <p>{{ . }}</p>
+    {{ end }}
+</div>
+{{end}}
