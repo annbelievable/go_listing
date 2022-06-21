@@ -1,28 +1,36 @@
-<html>
-	<head>
-		<title>Admin Login</title>
-	</head>
-	<body>
-		<h1>Admin Login</h1>
-		{{ with .Message }}
-		<p>{{ . }}</p>
-		{{ end }}
-		<form method="POST" action="/admin-login">
-			<div class="form-group">
-				<label for="email">Email address</label>
-				<input type="email" name="email" id="email" class="form-control" required="true">
-				{{ with .Errors.Email }}
-				<p class="error" >{{ . }}</p>
-				{{ end }}
+<!doctype html>
+<html lang="en">
+    <head>
+        <title>
+            My listing{{ with .Title }} | {{ . }}{{ end }}
+        </title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <meta name="description" content="My listing">
+        {{ template "meta" . }}
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous" />
+    </head>
+    <body>
+        {{ template "header" }}
+
+		<div class="container">
+			{{ with .Message }}
+			<p>{{ . }}</p>
+			{{ end }}
+			{{ with .Title }}
+			<div class="title">
+				<h1>{{ . }}</h1>
 			</div>
-			<div class="form-group">
-				<label for="password">Password</label>
-				<input type="password" name="password" id="password" class="form-control" required="true">
-				{{ with .Errors.Password }}
-				<p class="error" >{{ . }}</p>
-				{{ end }}
-			</div>
-			<button type="submit">Submit</button>
-		</form>
-	</body>
+			{{ end }}
+			{{ with .Content }}
+			<p>{{ . }}</p>
+			{{ end }}
+
+			<form method="POST" action="/admin-login">
+				{{ template "registerLogin" . }}
+			</form>
+		</div>
+
+        {{ template "footer" }}
+    </body>
 </html>

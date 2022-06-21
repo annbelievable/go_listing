@@ -1,5 +1,8 @@
 {{define "body"}}
 <div class="container">
+    {{ with .Message }}
+    <p>{{ . }}</p>
+    {{ end }}
     {{ with .Title }}
     <div class="title">
         <h1>{{ . }}</h1>
