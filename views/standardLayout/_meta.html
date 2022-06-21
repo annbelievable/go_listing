@@ -3,8 +3,8 @@
 <meta property="og:site_name" content="My Listing">
 {{ with .Title }}<meta property="og:title" content="{{ . }}">{{ end }}
 {{ with .Url }}<meta property="og:url" content="{{ . }}">{{ end }}
-{{ with .Teaser }}<meta property="og:description" content="Grabathon v8.0 is happening Oct 22nd — Oct 24th 2020. See you there.">{{ end }}
+{{ with .Teaser }}<meta property="og:description" content="{{ . }}">{{ end }}
 
-{{ with .Title }}<meta name="twitter:title" content="Grabathon v8.0">{{ end }}
-{{ with .Teaser }}<meta name="twitter:description" content="Grabathon v8.0 is happening Oct 22nd — Oct 24th 2020. See you there.">{{ end }}
+{{ with .Title }}<meta name="twitter:title" content="{{ . }}">{{ end }}
+{{ with .Teaser }}<meta name="twitter:description" content="{{ . }}">{{ end }}
 {{end}}
