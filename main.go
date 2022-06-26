@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"html/template"
 	"log"
@@ -15,11 +16,6 @@ import (
 
 var templates = template.Must(template.ParseGlob("./views/**/*.html"))
 var db *sql.DB
-
-type MessageData struct {
-	Message string
-	Errors  map[string]string
-}
 
 type PageData struct {
 	Id      string
@@ -65,7 +61,8 @@ func AdminRegisterAction(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Println(err.Error)
+		InternalServerError(w, r)
 		return
 	}
 
@@ -75,12 +72,12 @@ func AdminRegisterAction(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Println(err.Error)
-		renderPage(w, "internal_server_error.html", nil)
+		InternalServerError(w, r)
 		return
 	}
 
 	if exist > 0 {
-		renderPage(w, "admin_register.html", MessageData{Message: "Email already exist."})
+		AdminRegister(w, r)
 		return
 	}
 
@@ -88,7 +85,7 @@ func AdminRegisterAction(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Println(err.Error)
-		renderPage(w, "internal_server_error.html", nil)
+		InternalServerError(w, r)
 		return
 	}
 
@@ -96,11 +93,11 @@ func AdminRegisterAction(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Println(err.Error)
-		renderPage(w, "internal_server_error.html", nil)
+		InternalServerError(w, r)
 		return
 	}
 
-	renderPage(w, "admin_login.html", MessageData{Message: "Registration success."})
+	http.Redirect(w, r, "/admin-login", http.StatusFound)
 }
 
 func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
@@ -108,29 +105,30 @@ func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Println(err.Error)
-		renderPage(w, "internal_server_error.html", nil)
+		InternalServerError(w, r)
 		return
 	}
 
 	email := r.Form.Get("email")
 	password := r.Form.Get("password")
-
 	hpwd, err := database.SelectAdminHpwd(db, email)
 
 	if err != nil {
 		log.Println(err.Error)
-		renderPage(w, "internal_server_error.html", nil)
+		InternalServerError(w, r)
 		return
 	}
 
 	match := handlers.ComparePasswords(hpwd, password)
 
 	if !match {
-		renderPage(w, "admin_login.html", MessageData{Message: "Login failed."})
+		ctx := r.Context()
+		ctx = context.WithValue(r.Context(), "Message", "Login failed.")
+		AdminLogin(w, r.WithContext(ctx))
 		return
 	}
 
-	renderPage(w, "admin_homepage.html", MessageData{Message: "Successfully login."})
+	http.Redirect(w, r, "/admin-homepage", http.StatusFound)
 }
 
 // simple views
@@ -139,7 +137,11 @@ func Homepage(w http.ResponseWriter, r *http.Request) {
 		Title:   "Home",
 		Content: "This is My listing. Please enjoy browsing.",
 	}
-
+	ctxMsg := r.Context().Value("Message")
+	if ctxMsg != nil {
+		data.Message = ctxMsg.(string)
+	}
+	log.Printf("Message value %v\n", ctxMsg)
 	render(w, data)
 }
 
@@ -147,6 +149,10 @@ func AdminRegister(w http.ResponseWriter, r *http.Request) {
 	data := PageData{
 		Title:   "Admin Registration",
 		Content: "",
+	}
+	ctxMsg := r.Context().Value("Message")
+	if ctxMsg != nil {
+		data.Message = ctxMsg.(string)
 	}
 	renderPage(w, "admin_register.html", data)
 }
@@ -156,6 +162,10 @@ func AdminLogin(w http.ResponseWriter, r *http.Request) {
 		Title:   "Admin Login",
 		Content: "",
 	}
+	ctxMsg := r.Context().Value("Message")
+	if ctxMsg != nil {
+		data.Message = ctxMsg.(string)
+	}
 	renderPage(w, "admin_login.html", data)
 }
 
@@ -163,6 +173,10 @@ func AdminHomepage(w http.ResponseWriter, r *http.Request) {
 	data := PageData{
 		Title:   "Admin Homepage",
 		Content: "",
+	}
+	ctxMsg := r.Context().Value("Message")
+	if ctxMsg != nil {
+		data.Message = ctxMsg.(string)
 	}
 	render(w, data)
 }
