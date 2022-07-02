@@ -38,9 +38,9 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/", Homepage).Methods("GET")
 	router.HandleFunc("/admin-register", AdminRegister).Methods("GET")
-	router.HandleFunc("/admin-register", AdminRegisterAction).Methods("POST")
+	router.Handle("/admin-register", parseFormHandler(http.HandlerFunc(AdminRegisterAction))).Methods("POST")
 	router.HandleFunc("/admin-login", AdminLogin).Methods("GET")
-	router.HandleFunc("/admin-login", AdminLoginAction).Methods("POST")
+	router.Handle("/admin-login", parseFormHandler(http.HandlerFunc(AdminLoginAction))).Methods("POST")
 	router.HandleFunc("/admin-homepage", AdminHomepage).Methods("GET")
 	router.HandleFunc("/admin-logout", AdminLogout).Methods("POST")
 	router.HandleFunc("/test", Test).Methods("GET")
@@ -58,14 +58,6 @@ func main() {
 
 // actions
 func AdminRegisterAction(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
-
-	if err != nil {
-		log.Println(err.Error)
-		InternalServerError(w, r)
-		return
-	}
-
 	email := r.Form.Get("email")
 	password := r.Form.Get("password")
 	exist, err := database.AdminEmailExist(db, email)
@@ -101,14 +93,6 @@ func AdminRegisterAction(w http.ResponseWriter, r *http.Request) {
 }
 
 func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
-
-	if err != nil {
-		log.Println(err.Error)
-		InternalServerError(w, r)
-		return
-	}
-
 	email := r.Form.Get("email")
 	password := r.Form.Get("password")
 	hpwd, err := database.SelectAdminHpwd(db, email)
@@ -250,6 +234,20 @@ func recoverHandler(next http.Handler) http.Handler {
 				http.Error(w, "Something went wrong.", 500)
 			}
 		}()
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func parseFormHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		err := r.ParseForm()
+
+		if err != nil {
+			log.Println(err.Error)
+			InternalServerError(w, r)
+			return
+		}
 
 		next.ServeHTTP(w, r)
 	})
