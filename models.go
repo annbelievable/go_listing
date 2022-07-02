@@ -1,5 +1,7 @@
 package main
 
+import "time"
+
 type PageData struct {
 	Id      string
 	Url     string
@@ -8,4 +10,15 @@ type PageData struct {
 	Content string
 	Message string
 	Errors  map[string]string
+}
+
+type AdminUser struct {
+	Id    uint64
+	Email string
+}
+
+type AdminUserSession struct {
+	SessionId  string
+	AdminUser  int
+	ExpiryDate time.Time
 }
