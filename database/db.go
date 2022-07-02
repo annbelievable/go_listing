@@ -29,13 +29,3 @@ func ConnectDatabase() *sql.DB {
 
 	return db
 }
-
-func CreateAdminTable(db *sql.DB) error {
-	_, err := db.Exec("CREATE TABLE IF NOT EXISTS admin_user (id SERIAL PRIMARY KEY NOT NULL, email CHAR(255) NOT NULL, password CHAR(255) NOT NULL, dateupdated TIMESTAMP NOT NULL, datecreated TIMESTAMP NOT NULL);")
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}

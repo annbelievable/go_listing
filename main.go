@@ -17,23 +17,8 @@ import (
 var templates = template.Must(template.ParseGlob("./views/**/*.html"))
 var db *sql.DB
 
-type PageData struct {
-	Id      string
-	Url     string
-	Title   string
-	Teaser  string
-	Content string
-	Message string
-	Errors  map[string]string
-}
-
 func main() {
 	db = database.ConnectDatabase()
-	err := database.CreateAdminTable(db)
-	// server should still show some pages despite no data from database
-	if err != nil {
-		log.Println(err)
-	}
 
 	router := mux.NewRouter()
 	router.HandleFunc("/", Homepage).Methods("GET")
