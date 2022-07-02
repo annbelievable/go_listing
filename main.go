@@ -102,7 +102,7 @@ func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
 
 // simple views
 func Homepage(w http.ResponseWriter, r *http.Request) {
-	data := PageData{
+	data := Page{
 		Title:   "Home",
 		Content: "This is My listing. Please enjoy browsing.",
 	}
@@ -115,7 +115,7 @@ func Homepage(w http.ResponseWriter, r *http.Request) {
 }
 
 func AdminRegister(w http.ResponseWriter, r *http.Request) {
-	data := PageData{
+	data := Page{
 		Title:   "Admin Registration",
 		Content: "",
 	}
@@ -127,7 +127,7 @@ func AdminRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 func AdminLogin(w http.ResponseWriter, r *http.Request) {
-	data := PageData{
+	data := Page{
 		Title:   "Admin Login",
 		Content: "",
 	}
@@ -139,7 +139,7 @@ func AdminLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func AdminHomepage(w http.ResponseWriter, r *http.Request) {
-	data := PageData{
+	data := Page{
 		Title:   "Admin Homepage",
 		Content: "",
 	}
@@ -151,7 +151,7 @@ func AdminHomepage(w http.ResponseWriter, r *http.Request) {
 }
 
 func AdminLogout(w http.ResponseWriter, r *http.Request) {
-	data := PageData{
+	data := Page{
 		Title:   "Homepage",
 		Content: "This is My listing. Please enjoy browsing.",
 	}
@@ -161,7 +161,7 @@ func AdminLogout(w http.ResponseWriter, r *http.Request) {
 // 500
 func InternalServerError(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusInternalServerError)
-	data := PageData{
+	data := Page{
 		Title:   "500: Internal Server Error",
 		Content: "An error occurred, please contact admin about it.",
 	}
@@ -171,7 +171,7 @@ func InternalServerError(w http.ResponseWriter, r *http.Request) {
 // 400
 func BadRequest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
-	data := PageData{
+	data := Page{
 		Title:   "400: Bad Request",
 		Content: "Please try again.",
 	}
@@ -181,7 +181,7 @@ func BadRequest(w http.ResponseWriter, r *http.Request) {
 // 401
 func AccessDenied(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusUnauthorized)
-	data := PageData{
+	data := Page{
 		Title:   "401: Access Denied",
 		Content: "You're not allowed to access this content.",
 	}
@@ -192,7 +192,7 @@ func AccessDenied(w http.ResponseWriter, r *http.Request) {
 func notFound() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		data := PageData{
+		data := Page{
 			Title:   "404: Not Found",
 			Content: "The content youre looking for is not found.",
 		}
@@ -242,7 +242,7 @@ func parseFormHandler(next http.Handler) http.Handler {
 
 // this is for testing purpose only
 func Test(w http.ResponseWriter, r *http.Request) {
-	data := PageData{
+	data := Page{
 		Title:   "Test",
 		Content: "This is a test page.",
 	}

@@ -2,7 +2,7 @@ package main
 
 import "time"
 
-type PageData struct {
+type Page struct {
 	Id      string
 	Url     string
 	Title   string
