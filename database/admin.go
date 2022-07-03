@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/annbelievable/go_listing/models"
+
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
@@ -11,6 +13,18 @@ func InsertAdmin(db *sql.DB, email, password string) error {
 	_, err := db.Exec("INSERT INTO admin_user(email, password, dateupdated, datecreated) VALUES($1, $2, $3, $4);", email, password, time.Now(), time.Now())
 
 	return err
+}
+
+func SelectAdmin(db *sql.DB, email string) models.Admin {
+	row := db.QueryRow("SELECT id, email, password AS count FROM admin_user WHERE email = $1;", email)
+	var admin models.Admin
+	err := row.Scan(&admin.Id, &admin.Email, &admin.Password)
+
+	if err != nil || err != sql.ErrNoRows {
+		return nil
+	}
+
+	return admin
 }
 
 func SelectAdminHpwd(db *sql.DB, email string) (string, error) {
@@ -26,18 +40,14 @@ func SelectAdminHpwd(db *sql.DB, email string) (string, error) {
 	return hpwd, nil
 }
 
-// to be implemented
-// func SelectAdminData(db *sql.DB, email string) (int, error) {
-// }
-
-func AdminEmailExist(db *sql.DB, email string) (int, error) {
+func AdminEmailExist(db *sql.DB, email string) bool {
 	row := db.QueryRow("SELECT count(*) AS count FROM admin_user WHERE email = $1;", email)
 	var count int
 	err := row.Scan(&count)
 
-	if err != nil && err != sql.ErrNoRows {
-		return count, err
+	if err != nil || err != sql.ErrNoRows {
+		return false
 	}
 
-	return count, nil
+	return count > 0
 }

@@ -13,8 +13,9 @@ type Page struct {
 }
 
 type AdminUser struct {
-	Id    uint64
-	Email string
+	Id       uint64
+	Email    string
+	Password string
 }
 
 type AdminUserSession struct {

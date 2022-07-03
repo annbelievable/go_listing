@@ -10,6 +10,8 @@ import (
 
 	"github.com/annbelievable/go_listing/database"
 	"github.com/annbelievable/go_listing/handlers"
+	"github.com/annbelievable/go_listing/models"
+	"github.com/google/uuid"
 
 	"github.com/gorilla/mux"
 )
@@ -45,16 +47,12 @@ func main() {
 func AdminRegisterAction(w http.ResponseWriter, r *http.Request) {
 	email := r.Form.Get("email")
 	password := r.Form.Get("password")
-	exist, err := database.AdminEmailExist(db, email)
+	exist := database.AdminEmailExist(db, email)
 
-	if err != nil {
-		log.Println(err.Error)
-		InternalServerError(w, r)
-		return
-	}
-
-	if exist > 0 {
-		AdminRegister(w, r)
+	if exist {
+		ctx := r.Context()
+		ctx = context.WithValue(r.Context(), "Message", "Email already registered.")
+		AdminRegister(w, r.WithContext(ctx))
 		return
 	}
 
@@ -97,12 +95,28 @@ func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	sessionId := uuid.NewString()
+	expiryDate := time.Now().Add(30 * time.Minute)
+
+	err = database.InsertAdminSession(db, sessionId, email, expiryDate)
+	if err != nil {
+		log.Println(err.Error)
+		InternalServerError(w, r)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:    "session_id",
+		Value:   sessionId,
+		Expires: expiryDate,
+	})
+
 	http.Redirect(w, r, "/admin-homepage", http.StatusFound)
 }
 
 // simple views
 func Homepage(w http.ResponseWriter, r *http.Request) {
-	data := Page{
+	data := models.Page{
 		Title:   "Home",
 		Content: "This is My listing. Please enjoy browsing.",
 	}
@@ -115,7 +129,7 @@ func Homepage(w http.ResponseWriter, r *http.Request) {
 }
 
 func AdminRegister(w http.ResponseWriter, r *http.Request) {
-	data := Page{
+	data := models.Page{
 		Title:   "Admin Registration",
 		Content: "",
 	}
@@ -127,7 +141,7 @@ func AdminRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 func AdminLogin(w http.ResponseWriter, r *http.Request) {
-	data := Page{
+	data := models.Page{
 		Title:   "Admin Login",
 		Content: "",
 	}
@@ -139,7 +153,7 @@ func AdminLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func AdminHomepage(w http.ResponseWriter, r *http.Request) {
-	data := Page{
+	data := models.Page{
 		Title:   "Admin Homepage",
 		Content: "",
 	}
@@ -151,7 +165,7 @@ func AdminHomepage(w http.ResponseWriter, r *http.Request) {
 }
 
 func AdminLogout(w http.ResponseWriter, r *http.Request) {
-	data := Page{
+	data := models.Page{
 		Title:   "Homepage",
 		Content: "This is My listing. Please enjoy browsing.",
 	}
@@ -161,7 +175,7 @@ func AdminLogout(w http.ResponseWriter, r *http.Request) {
 // 500
 func InternalServerError(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusInternalServerError)
-	data := Page{
+	data := models.Page{
 		Title:   "500: Internal Server Error",
 		Content: "An error occurred, please contact admin about it.",
 	}
@@ -171,7 +185,7 @@ func InternalServerError(w http.ResponseWriter, r *http.Request) {
 // 400
 func BadRequest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusBadRequest)
-	data := Page{
+	data := models.Page{
 		Title:   "400: Bad Request",
 		Content: "Please try again.",
 	}
@@ -181,7 +195,7 @@ func BadRequest(w http.ResponseWriter, r *http.Request) {
 // 401
 func AccessDenied(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusUnauthorized)
-	data := Page{
+	data := models.Page{
 		Title:   "401: Access Denied",
 		Content: "You're not allowed to access this content.",
 	}
@@ -192,7 +206,7 @@ func AccessDenied(w http.ResponseWriter, r *http.Request) {
 func notFound() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		data := Page{
+		data := models.Page{
 			Title:   "404: Not Found",
 			Content: "The content youre looking for is not found.",
 		}
@@ -238,11 +252,41 @@ func parseFormHandler(next http.Handler) http.Handler {
 	})
 }
 
+func isLoggedInHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := r.Cookie("session_id")
+		if err != nil {
+			if err == http.ErrNoCookie {
+				AccessDenied(w, r)
+				return
+			}
+			BadRequest(w, r)
+			return
+		}
+
+		sessionId := c.Value
+		session := database.SelectAdminSession(sessionId)
+
+		if session != nil {
+			AccessDenied(w, r)
+			return
+		}
+
+		if session.ExpiryDate.After(time.Now()) {
+			// delete session here
+			AccessDenied(w, r)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 // UTIL FUNC
 
 // this is for testing purpose only
 func Test(w http.ResponseWriter, r *http.Request) {
-	data := Page{
+	data := models.Page{
 		Title:   "Test",
 		Content: "This is a test page.",
 	}
