@@ -20,6 +20,6 @@ type AdminUser struct {
 
 type AdminUserSession struct {
 	SessionId  string
-	AdminUser  int
+	AdminUser  uint64
 	ExpiryDate time.Time
 }

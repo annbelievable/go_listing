@@ -9,22 +9,22 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
-func InsertAdminSession(db *sql.DB, session_id string, admin_user int64, expiry_date time.Time) error {
+func InsertAdminSession(db *sql.DB, session_id string, admin_user uint64, expiry_date time.Time) error {
 	_, err := db.Exec("INSERT INTO admin_user_session(session_id, admin_user, expiry_date, datecreated) VALUES($1, $2, $3, $4);", session_id, admin_user, expiry_date, time.Now())
 
 	return err
 }
 
-func SelectAdminSession(db *sql.DB, sessionId string) models.AdminUserSession {
+func SelectAdminSession(db *sql.DB, sessionId string) (models.AdminUserSession, error) {
 	row := db.QueryRow("SELECT session_id, admin_user, expiry_date FROM admin_user_session WHERE session_id = $1;", sessionId)
 	var session models.AdminUserSession
 	err := row.Scan(&session.SessionId, &session.AdminUser, &session.ExpiryDate)
 
-	if err != nil || err != sql.ErrNoRows {
-		return session
+	if err != nil && err != sql.ErrNoRows {
+		return session, err
 	}
 
-	return session
+	return session, nil
 }
 
 func AdminSessionExist(db *sql.DB, session_id string) bool {

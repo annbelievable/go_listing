@@ -78,7 +78,7 @@ func AdminRegisterAction(w http.ResponseWriter, r *http.Request) {
 func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
 	email := r.Form.Get("email")
 	password := r.Form.Get("password")
-	hpwd, err := database.SelectAdminHpwd(db, email)
+	admin, err := database.SelectAdmin(db, email)
 
 	if err != nil {
 		log.Println(err.Error)
@@ -86,7 +86,7 @@ func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	match := handlers.ComparePasswords(hpwd, password)
+	match := handlers.ComparePasswords(admin.Password, password)
 
 	if !match {
 		ctx := r.Context()
@@ -98,7 +98,7 @@ func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
 	sessionId := uuid.NewString()
 	expiryDate := time.Now().Add(30 * time.Minute)
 
-	err = database.InsertAdminSession(db, sessionId, email, expiryDate)
+	err = database.InsertAdminSession(db, sessionId, admin.Id, expiryDate)
 	if err != nil {
 		log.Println(err.Error)
 		InternalServerError(w, r)
@@ -265,9 +265,15 @@ func isLoggedInHandler(next http.Handler) http.Handler {
 		}
 
 		sessionId := c.Value
-		session := database.SelectAdminSession(sessionId)
+		session, err := database.SelectAdminSession(db, sessionId)
 
-		if session != nil {
+		if err != nil {
+			log.Println(err.Error)
+			InternalServerError(w, r)
+			return
+		}
+
+		if len(session.SessionId) == 0 {
 			AccessDenied(w, r)
 			return
 		}

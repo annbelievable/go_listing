@@ -15,16 +15,16 @@ func InsertAdmin(db *sql.DB, email, password string) error {
 	return err
 }
 
-func SelectAdmin(db *sql.DB, email string) models.AdminUser {
+func SelectAdmin(db *sql.DB, email string) (models.AdminUser, error) {
 	row := db.QueryRow("SELECT id, email, password AS count FROM admin_user WHERE email = $1;", email)
 	var admin models.AdminUser
 	err := row.Scan(&admin.Id, &admin.Email, &admin.Password)
 
-	if err != nil || err != sql.ErrNoRows {
-		return admin
+	if err != nil && err != sql.ErrNoRows {
+		return admin, err
 	}
 
-	return admin
+	return admin, nil
 }
 
 func SelectAdminHpwd(db *sql.DB, email string) (string, error) {
