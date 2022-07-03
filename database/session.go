@@ -21,7 +21,7 @@ func SelectAdminSession(db *sql.DB, sessionId string) models.AdminUserSession {
 	err := row.Scan(&session.SessionId, &session.AdminUser, &session.ExpiryDate)
 
 	if err != nil || err != sql.ErrNoRows {
-		return nil
+		return session
 	}
 
 	return session
