@@ -45,7 +45,7 @@ func AdminEmailExist(db *sql.DB, email string) bool {
 	var count int
 	err := row.Scan(&count)
 
-	if err != nil || err != sql.ErrNoRows {
+	if err != nil && err != sql.ErrNoRows {
 		return false
 	}
 

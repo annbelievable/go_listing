@@ -59,7 +59,7 @@ func AdminRegisterAction(w http.ResponseWriter, r *http.Request) {
 	hashedPwd, err := handlers.HashAndSalt(password)
 
 	if err != nil {
-		log.Println(err.Error)
+		LogError(err)
 		InternalServerError(w, r)
 		return
 	}
@@ -67,7 +67,7 @@ func AdminRegisterAction(w http.ResponseWriter, r *http.Request) {
 	err = database.InsertAdmin(db, email, hashedPwd)
 
 	if err != nil {
-		log.Println(err.Error)
+		LogError(err)
 		InternalServerError(w, r)
 		return
 	}
@@ -81,7 +81,7 @@ func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
 	admin, err := database.SelectAdmin(db, email)
 
 	if err != nil {
-		log.Println(err.Error)
+		LogError(err)
 		InternalServerError(w, r)
 		return
 	}
@@ -100,7 +100,7 @@ func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
 
 	err = database.InsertAdminSession(db, sessionId, admin.Id, expiryDate)
 	if err != nil {
-		log.Println(err.Error)
+		LogError(err)
 		InternalServerError(w, r)
 		return
 	}
@@ -229,7 +229,7 @@ func recoverHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				log.Printf("[ERROR] %+v\n", err)
+				LogError(err.(error))
 				http.Error(w, "Something went wrong.", 500)
 			}
 		}()
@@ -243,7 +243,7 @@ func parseFormHandler(next http.Handler) http.Handler {
 		err := r.ParseForm()
 
 		if err != nil {
-			log.Println(err.Error)
+			LogError(err)
 			InternalServerError(w, r)
 			return
 		}
@@ -268,7 +268,7 @@ func isLoggedInHandler(next http.Handler) http.Handler {
 		session, err := database.SelectAdminSession(db, sessionId)
 
 		if err != nil {
-			log.Println(err.Error)
+			LogError(err)
 			InternalServerError(w, r)
 			return
 		}
@@ -279,7 +279,7 @@ func isLoggedInHandler(next http.Handler) http.Handler {
 		}
 
 		if session.ExpiryDate.After(time.Now()) {
-			// delete session here
+			database.DeleteAdminSession(db, sessionId)
 			AccessDenied(w, r)
 			return
 		}
@@ -313,7 +313,11 @@ func renderPage(w http.ResponseWriter, fileName string, data interface{}) {
 
 func checkError(w http.ResponseWriter, err error) {
 	if err != nil {
-		log.Printf("[ERROR] %+v\n", err)
+		LogError(err)
 		http.Error(w, "Something went wrong.", 500)
 	}
+}
+
+func LogError(err error) {
+	log.Printf("[ERROR] %+v\n", err)
 }

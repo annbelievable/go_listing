@@ -33,9 +33,13 @@ func AdminSessionExist(db *sql.DB, session_id string) bool {
 	var count int
 	err := row.Scan(&count)
 
-	if err != nil || err != sql.ErrNoRows {
+	if err != nil && err != sql.ErrNoRows {
 		return false
 	}
 
 	return count > 0
+}
+
+func DeleteAdminSession(db *sql.DB, session_id string) {
+	db.Exec("DELETE FROM admin_user_session WHERE session_id = $1;", session_id)
 }
