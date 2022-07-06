@@ -10,6 +10,12 @@
 		<li class="nav-item">
 			<a class="nav-link" href="/test">Test</a>
 		</li>
+		<li class="nav-item">
+			<a class="nav-link" id="admin-logout-link" href="#" >Logout</a>
+		</li>
 	</ul>
+	<form id="admin-logout-form" action="/admin-logout" method="post" hidden="true">
+		<input hidden type="submit" value="Logout"/>
+	</form>
 </header>
 {{end}}
