@@ -6,7 +6,7 @@ dateupdated TIMESTAMP NOT NULL,
 datecreated TIMESTAMP NOT NULL);
 
 CREATE TABLE IF NOT EXISTS admin_user_session (
-session_id VARCHAR(30) PRIMARY KEY NOT NULL,
+session_id VARCHAR(36) PRIMARY KEY NOT NULL,
 admin_user INTEGER UNIQUE REFERENCES admin_user,
 expiry_date TIMESTAMP NOT NULL,
 datecreated TIMESTAMP NOT NULL);
