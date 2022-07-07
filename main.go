@@ -24,12 +24,14 @@ func main() {
 
 	router := mux.NewRouter()
 	router.HandleFunc("/", Homepage).Methods("GET")
-	router.HandleFunc("/admin-register", AdminRegister).Methods("GET")
+
+	router.Handle("/admin-register", isAdminLoggedInHandler(http.HandlerFunc(AdminRegister))).Methods("GET")
 	router.Handle("/admin-register", parseFormHandler(http.HandlerFunc(AdminRegisterAction))).Methods("POST")
-	router.HandleFunc("/admin-login", AdminLogin).Methods("GET")
+	router.Handle("/admin-login", isAdminLoggedInHandler(http.HandlerFunc(AdminLogin))).Methods("GET")
 	router.Handle("/admin-login", parseFormHandler(http.HandlerFunc(AdminLoginAction))).Methods("POST")
-	router.HandleFunc("/admin-homepage", AdminHomepage).Methods("GET")
+	router.Handle("/admin-homepage", isAdminNotLoggedInHandler(http.HandlerFunc(AdminHomepage))).Methods("GET")
 	router.HandleFunc("/admin-logout", AdminLogout).Methods("POST")
+
 	router.HandleFunc("/test", Test).Methods("GET")
 	router.HandleFunc("/bad-request", BadRequest).Methods("GET")
 	router.HandleFunc("/access-denied", AccessDenied).Methods("GET")
@@ -98,6 +100,7 @@ func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
 	sessionId := uuid.NewString()
 	expiryDate := time.Now().Add(30 * time.Minute)
 
+	database.DeleteAdminSessionByAdminId(db, admin.Id)
 	err = database.InsertAdminSession(db, sessionId, admin.Id, expiryDate)
 	if err != nil {
 		LogError(err)
@@ -114,6 +117,36 @@ func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin-homepage", http.StatusFound)
 }
 
+func AdminLogout(w http.ResponseWriter, r *http.Request) {
+	c, err := r.Cookie("session_id")
+	if err != nil {
+		LogError(err)
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+
+	sessionId := c.Value
+	session, err := database.SelectAdminSession(db, sessionId)
+
+	if err != nil {
+		LogError(err)
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+
+	if len(session.SessionId) == 0 && session.ExpiryDate.Before(time.Now()) {
+		database.DeleteAdminSession(db, sessionId)
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:    "session_id",
+		Value:   "",
+		Expires: time.Now(),
+	})
+
+	http.Redirect(w, r, "/", http.StatusFound)
+}
+
 // simple views
 func Homepage(w http.ResponseWriter, r *http.Request) {
 	data := models.Page{
@@ -124,7 +157,6 @@ func Homepage(w http.ResponseWriter, r *http.Request) {
 	if ctxMsg != nil {
 		data.Message = ctxMsg.(string)
 	}
-	log.Printf("Message value %v\n", ctxMsg)
 	render(w, data)
 }
 
@@ -160,14 +192,6 @@ func AdminHomepage(w http.ResponseWriter, r *http.Request) {
 	ctxMsg := r.Context().Value("Message")
 	if ctxMsg != nil {
 		data.Message = ctxMsg.(string)
-	}
-	render(w, data)
-}
-
-func AdminLogout(w http.ResponseWriter, r *http.Request) {
-	data := models.Page{
-		Title:   "Homepage",
-		Content: "This is My listing. Please enjoy browsing.",
 	}
 	render(w, data)
 }
@@ -252,15 +276,13 @@ func parseFormHandler(next http.Handler) http.Handler {
 	})
 }
 
-func isLoggedInHandler(next http.Handler) http.Handler {
+// check if admin is logged in
+func isAdminLoggedInHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c, err := r.Cookie("session_id")
 		if err != nil {
-			if err == http.ErrNoCookie {
-				AccessDenied(w, r)
-				return
-			}
-			BadRequest(w, r)
+			LogError(err)
+			next.ServeHTTP(w, r)
 			return
 		}
 
@@ -269,18 +291,56 @@ func isLoggedInHandler(next http.Handler) http.Handler {
 
 		if err != nil {
 			LogError(err)
-			InternalServerError(w, r)
+			next.ServeHTTP(w, r)
 			return
 		}
 
 		if len(session.SessionId) == 0 {
-			AccessDenied(w, r)
+			next.ServeHTTP(w, r)
 			return
 		}
 
-		if session.ExpiryDate.After(time.Now()) {
+		if session.ExpiryDate.Before(time.Now()) {
 			database.DeleteAdminSession(db, sessionId)
-			AccessDenied(w, r)
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		http.Redirect(w, r, "/admin-homepage", http.StatusFound)
+	})
+}
+
+// check if admin is not logged in
+func isAdminNotLoggedInHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c, err := r.Cookie("session_id")
+		if err != nil {
+			LogError(err)
+			log.Println("1")
+			http.Redirect(w, r, "/admin-login", http.StatusSeeOther)
+			return
+		}
+
+		sessionId := c.Value
+		session, err := database.SelectAdminSession(db, sessionId)
+
+		if err != nil {
+			LogError(err)
+			log.Println("2")
+			http.Redirect(w, r, "/admin-login", http.StatusSeeOther)
+			return
+		}
+
+		if len(session.SessionId) == 0 {
+			log.Println("3")
+			http.Redirect(w, r, "/admin-login", http.StatusSeeOther)
+			return
+		}
+
+		if session.ExpiryDate.Before(time.Now()) {
+			log.Println("4")
+			database.DeleteAdminSession(db, sessionId)
+			http.Redirect(w, r, "/admin-login", http.StatusSeeOther)
 			return
 		}
 

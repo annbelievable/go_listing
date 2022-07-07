@@ -43,3 +43,7 @@ func AdminSessionExist(db *sql.DB, session_id string) bool {
 func DeleteAdminSession(db *sql.DB, session_id string) {
 	db.Exec("DELETE FROM admin_user_session WHERE session_id = $1;", session_id)
 }
+
+func DeleteAdminSessionByAdminId(db *sql.DB, adminId uint64) {
+	db.Exec("DELETE FROM admin_user_session WHERE admin_user = $1;", adminId)
+}
