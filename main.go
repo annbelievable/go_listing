@@ -120,7 +120,6 @@ func AdminLoginAction(w http.ResponseWriter, r *http.Request) {
 func AdminLogout(w http.ResponseWriter, r *http.Request) {
 	c, err := r.Cookie("session_id")
 	if err != nil {
-		LogError(err)
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}
@@ -281,7 +280,6 @@ func isAdminLoggedInHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c, err := r.Cookie("session_id")
 		if err != nil {
-			LogError(err)
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -315,8 +313,6 @@ func isAdminNotLoggedInHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		c, err := r.Cookie("session_id")
 		if err != nil {
-			LogError(err)
-			log.Println("1")
 			http.Redirect(w, r, "/admin-login", http.StatusSeeOther)
 			return
 		}
@@ -326,19 +322,16 @@ func isAdminNotLoggedInHandler(next http.Handler) http.Handler {
 
 		if err != nil {
 			LogError(err)
-			log.Println("2")
 			http.Redirect(w, r, "/admin-login", http.StatusSeeOther)
 			return
 		}
 
 		if len(session.SessionId) == 0 {
-			log.Println("3")
 			http.Redirect(w, r, "/admin-login", http.StatusSeeOther)
 			return
 		}
 
 		if session.ExpiryDate.Before(time.Now()) {
-			log.Println("4")
 			database.DeleteAdminSession(db, sessionId)
 			http.Redirect(w, r, "/admin-login", http.StatusSeeOther)
 			return
