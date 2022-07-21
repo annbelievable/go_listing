@@ -253,6 +253,7 @@ func AccessDenied(w http.ResponseWriter, r *http.Request) {
 // 404
 func notFound() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("[INFO] NOT FOUND - %s %s %q\n", GetIP(r), r.Method, r.URL.String())
 		w.WriteHeader(http.StatusNotFound)
 		data := models.Page{
 			Title:   "404: Not Found",
@@ -269,8 +270,16 @@ func loggingHandler(next http.Handler) http.Handler {
 		t1 := time.Now()
 		next.ServeHTTP(w, r)
 		t2 := time.Now()
-		log.Printf("[INFO] %s %q %v\n", r.Method, r.URL.String(), t2.Sub(t1))
+		log.Printf("[INFO] %s %s %q %v\n", GetIP(r), r.Method, r.URL.String(), t2.Sub(t1))
 	})
+}
+
+func GetIP(r *http.Request) string {
+	forwarded := r.Header.Get("X-FORWARDED-FOR")
+	if forwarded != "" {
+		return forwarded
+	}
+	return r.RemoteAddr
 }
 
 func recoverHandler(next http.Handler) http.Handler {
@@ -315,7 +324,7 @@ func sessionHandler(next http.Handler) http.Handler {
 		session, err := database.SelectAdminSession(db, sessionId)
 
 		if err != nil || len(session.SessionId) == 0 {
-			if session.SessionId > 0 {
+			if len(session.SessionId) > 0 {
 				LogError(err)
 			}
 			ctx = context.WithValue(r.Context(), "LoggedIn", false)
