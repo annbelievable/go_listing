@@ -3,13 +3,13 @@ package models
 import "time"
 
 type Page struct {
-	Id      string
+	Id      uint64
 	Url     string
 	Title   string
 	Teaser  string
 	Content string
-	Message string
-	Errors  map[string]string
+	// Message string
+	// Errors  map[string]string
 }
 
 type AdminUser struct {

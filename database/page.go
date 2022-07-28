@@ -9,45 +9,61 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
-func InsertPage(db *sql.DB, email, password string) error {
-	_, err := db.Exec("INSERT INTO admin_user(email, password, dateupdated, datecreated) VALUES($1, $2, $3, $4);", email, password, time.Now(), time.Now())
+func InsertPage(db *sql.DB, page models.Page) error {
+	_, err := db.Exec("INSERT INTO page(title, url, teaser, content, dateupdated, datecreated) VALUES($1, $2, $3, $4, $5, $6);", page.Title, page.Url, page.Teaser, page.Content, time.Now(), time.Now())
 
 	return err
 }
 
-func SelectPage(db *sql.DB, email string) (models.AdminUser, error) {
-	row := db.QueryRow("SELECT id, email, password AS count FROM admin_user WHERE email = $1;", email)
-	var admin models.AdminUser
-	err := row.Scan(&admin.Id, &admin.Email, &admin.Password)
+func GetPageById(db *sql.DB, id uint64) (models.Page, error) {
+	row := db.QueryRow("SELECT id, title, url, teaser, content FROM page WHERE id = $1;", id)
+	var page models.Page
+	err := row.Scan(&page.Id, &page.Title, &page.Url, &page.Teaser, &page.Content)
 
-	if err != nil && err != sql.ErrNoRows {
-		return admin, err
+	if err != nil {
+		return page, err
 	}
 
-	return admin, nil
+	return page, nil
 }
 
-func UpdatePage(db *sql.DB, email string) (string, error) {
-	row := db.QueryRow("SELECT password FROM admin_user WHERE email = $1;", email)
+func GetPageByUrl(db *sql.DB, url string) (models.Page, error) {
+	row := db.QueryRow("SELECT title, url, teaser, content FROM page WHERE url = $1;", url)
+	var page models.Page
+	err := row.Scan(&page.Id, &page.Title, &page.Url, &page.Teaser, &page.Content)
 
-	var hpwd string
-	err := row.Scan(&hpwd)
-
-	if err != nil && err != sql.ErrNoRows {
-		return hpwd, err
+	if err != nil {
+		return page, err
 	}
 
-	return hpwd, nil
+	return page, nil
 }
 
-func DeletePage(db *sql.DB, email string) bool {
-	row := db.QueryRow("SELECT count(*) AS count FROM admin_user WHERE email = $1;", email)
-	var count int
-	err := row.Scan(&count)
+func GetPages(db *sql.DB) ([]models.Page, error) {
+	rows, err := db.Query("SELECT id, title, url, teaser, content FROM page ORDER BY url ASC;")
 
-	if err != nil && err != sql.ErrNoRows {
-		return false
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var pages []models.Page
+	for rows.Next() {
+		var page models.Page
+		if err := rows.Scan(&page.Id, &page.Title, &page.Url, &page.Teaser, &page.Content); err != nil {
+			return pages, err
+		}
+		pages = append(pages, page)
 	}
 
-	return count > 0
+	return pages, nil
+}
+
+func UpdatePage(db *sql.DB, page models.Page) error {
+	_, err := db.Exec("UPDATE page SET title = $1, url = $2, teaser = $3, content = $4 WHERE id = $5;", page.Title, page.Url, page.Teaser, page.Content, page.Id)
+	return err
+}
+
+func DeletePage(db *sql.DB, id uint64) {
+	db.Exec("DELETE FROM page WHERE id = $1;", id)
 }

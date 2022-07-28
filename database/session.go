@@ -20,7 +20,7 @@ func SelectAdminSession(db *sql.DB, sessionId string) (models.AdminUserSession, 
 	var session models.AdminUserSession
 	err := row.Scan(&session.SessionId, &session.AdminUser, &session.ExpiryDate)
 
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
 		return session, err
 	}
 
@@ -33,7 +33,7 @@ func AdminSessionExist(db *sql.DB, session_id string) bool {
 	var count int
 	err := row.Scan(&count)
 
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
 		return false
 	}
 

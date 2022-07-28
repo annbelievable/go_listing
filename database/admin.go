@@ -20,7 +20,7 @@ func SelectAdmin(db *sql.DB, email string) (models.AdminUser, error) {
 	var admin models.AdminUser
 	err := row.Scan(&admin.Id, &admin.Email, &admin.Password)
 
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
 		return admin, err
 	}
 
@@ -33,7 +33,7 @@ func SelectAdminHpwd(db *sql.DB, email string) (string, error) {
 	var hpwd string
 	err := row.Scan(&hpwd)
 
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
 		return hpwd, err
 	}
 
@@ -45,7 +45,7 @@ func AdminEmailExist(db *sql.DB, email string) bool {
 	var count int
 	err := row.Scan(&count)
 
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
 		return false
 	}
 

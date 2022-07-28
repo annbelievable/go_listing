@@ -1,0 +1,31 @@
+{{define "page"}}
+<div class="form-group">
+    <label for="url">Url</label>
+    <input type="text" name="url" id="url" class="form-control" required="true" {{ with .PageObj.Url }}value="{{ . }}"{{ end }}>
+    {{ with .Errors.Url }}
+    <p class="error" >{{ . }}</p>
+    {{ end }}
+</div>
+<div class="form-group">
+    <label for="title">Title</label>
+    <input type="text" name="title" id="title" class="form-control" required="true" {{ with .PageObj.Title }}value="{{ . }}"{{ end }}>
+    {{ with .Errors.Title }}
+    <p class="error" >{{ . }}</p>
+    {{ end }}
+</div>
+<div class="form-group">
+    <label for="title">Teaser</label>
+    <input type="text" name="teaser" id="teaser" class="form-control" required="false" {{ with .PageObj.Teaser }}value="{{ . }}"{{ end }}>
+    {{ with .Errors.Teaser }}
+    <p class="error" >{{ . }}</p>
+    {{ end }}
+</div>
+<div class="form-group">
+    <label for="title">Content</label>
+    <input type="text" name="content" id="content" class="form-control" required="false" {{ with .PageObj.Content }}value="{{ . }}"{{ end }}>
+    {{ with .Errors.Content }}
+    <p class="error" >{{ . }}</p>
+    {{ end }}
+</div>
+<button type="submit">Submit</button>
+{{end}}

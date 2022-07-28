@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <title>
+            My listing{{ with .Title }} | {{ . }}{{ end }}
+        </title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <meta name="description" content="My listing">
+        {{ template "meta" . }}
+		{{ template "headScripts" . }}
+    </head>
+    <body>
+        {{ template "header" }}
+
+		<div class="container">
+			{{ with .Message }}
+			<p>{{ . }}</p>
+			{{ end }}
+			{{ with .Title }}
+			<div class="title">
+				<h1>{{ . }}</h1>
+			</div>
+			{{ end }}
+			{{ with .Content }}
+			<p>{{ . }}</p>
+			{{ end }}
+
+			<form method="POST" action="/update-page{{ with .PageObj.Id }}/{{ . }}{{ end }}">
+				{{ template "page" . }}
+			</form>
+		</div>
+
+        {{ template "footer" }}
+    </body>
+</html>
